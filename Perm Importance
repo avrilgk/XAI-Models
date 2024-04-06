@@ -1,0 +1,62 @@
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+import pandas as pd
+from sklearn.impute import SimpleImputer
+from sklearn.inspection import permutation_importance
+import numpy as np
+
+
+# Load the dataset
+data = pd.read_csv('stock_details_5_years.csv')
+
+# Create a binary target variable
+data['Target'] = (data['Close'] > data['Open']).astype(int)
+
+# Selecting features and target
+features = ['Open', 'High', 'Low', 'Volume', 'Dividends', 'Stock Splits']
+X = data[features]
+y = data['Target']
+
+# Handling missing values
+imputer = SimpleImputer(strategy='median')
+X_imputed = imputer.fit_transform(X)
+X = pd.DataFrame(X_imputed, columns=features)
+
+# Initialize a dictionary to store predictions for each Company
+company_predictions = {}
+company_importances = {}  # Dictionary to store feature importances for each Company
+
+# Select a few unique company symbols from the dataset for demonstration
+unique_company_symbols = data['Company'].unique()[:5]  # Taking the first 5 unique company symbols for simplicity
+
+# Loop over each selected company symbol
+for symbol in unique_company_symbols:
+    # Filter the data for the current company
+    current_company_data = data[data['Company'] == symbol].copy()
+
+    # Use 'Open', 'High', 'Low', 'Volume' to predict 'Target'
+    X = current_company_data[features]
+    y = current_company_data['Target']
+
+    # Split the data into training and testing sets (80% train, 20% test)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Initialize and train the model
+    model = RandomForestClassifier(n_estimators=10, random_state=42)
+    model.fit(X_train, y_train)
+
+    # Make predictions
+    predictions = model.predict(X_test)
+
+    # Compute permutation importance
+    result = permutation_importance(model, X_test, y_test, n_repeats=10, random_state=42, n_jobs=2)
+    sorted_idx = result.importances_mean.argsort()
+
+    # Store the prediction and importance for the current company
+    company_predictions[symbol] = predictions
+    company_importances[symbol] = result.importances_mean[sorted_idx]
+
+    # Print the feature importance for the company
+    print(f"\nFeature importances for Company {symbol}:")
+    for idx in sorted_idx:
+        print(f"{features[idx]}: {result.importances_mean[idx]:.5f}")
