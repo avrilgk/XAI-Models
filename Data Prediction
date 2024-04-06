@@ -1,0 +1,62 @@
+# Import necessary libraries
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+import pandas as pd
+from sklearn.impute import SimpleImputer
+
+
+# Load the dataset
+data = pd.read_csv('stock_details_5_years.csv')
+
+# Create a binary target variable
+data['Target'] = (data['Close'] > data['Open']).astype(int)
+
+# Selecting features and target
+features = ['Open', 'High', 'Low', 'Volume', 'Dividends', 'Stock Splits']
+X = data[features]
+y = data['Target']
+
+# Handling missing values
+imputer = SimpleImputer(strategy='median')
+X_imputed = imputer.fit_transform(X)
+X = pd.DataFrame(X_imputed, columns=features)
+
+# Initialize a dictionary to store predictions for each Company
+company_predictions = {}
+
+# Select a few unique company symbols from the dataset for demonstration
+unique_company_symbols = data['Company'].unique()[:5]  # Taking the first 5 unique company symbols for simplicity
+
+# Loop over each selected company symbol
+for symbol in unique_company_symbols:
+    # Filter the data for the current company
+    current_company_data = data[data['Company'] == symbol].copy()
+
+    # Use 'Open', 'High', 'Low', 'Volume' to predict 'Target'
+    X_current = current_company_data[['Open', 'High', 'Low', 'Volume']]
+    y_current = current_company_data['Target']
+
+    # Split the data into training and testing sets (80% train, 20% test)
+    X_train, X_test, y_train, y_test = train_test_split(X_current, y_current, test_size=0.2, random_state=42)
+
+    # Initialize and train the model
+    model = RandomForestClassifier(n_estimators=10, random_state=42)
+    model.fit(X_train, y_train)
+
+    # Prepare new sample data (Let's use the first row from the test set as an example)
+    sample_data = X_test.iloc[:1]
+
+    # Make predictions
+    prediction = model.predict(sample_data)[0]
+
+    # Store the prediction for the current company
+    company_predictions[symbol] = prediction
+
+
+# Print the predictions for each company
+print("\nPredictions for each Company (0: Down, 1: Up):")
+for symbol, prediction in company_predictions.items():
+    print(f"{symbol}: {prediction}")
+
+
+
