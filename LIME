@@ -1,0 +1,37 @@
+# Import LIME for explanations
+from lime.lime_tabular import LimeTabularExplainer
+
+# Assuming 'data', 'model', and 'X_first_train' are already available from the prediction part
+
+# Initialize LIME Explainer using the first Company's data for simplicity
+first_company_symbol = data['Company'].unique()[0]
+first_company_data = data[data['Company'] == first_company_symbol]
+X_first = first_company_data[['Open', 'High', 'Low', 'Volume']]
+y_first = first_company_data['Target']
+X_first_train, X_first_test, y_first_train, y_first_test = train_test_split(X_first, y_first, test_size=0.2, random_state=42)
+
+explainer = LimeTabularExplainer(X_first_train.values,
+                                 feature_names=['Open', 'High', 'Low', 'Volume'],
+                                 class_names=['Down', 'Up'],
+                                 discretize_continuous=True,
+                                 mode='classification')
+
+# Loop over each selected company symbol from the prediction part
+for symbol in unique_company_symbols:
+    # Filter the data for the current company
+    current_company_data = data[data['Company'] == symbol].copy()
+    X_current = current_company_data[['Open', 'High', 'Low', 'Volume']]
+
+    # Use the same split from the prediction part
+    X_train, X_test, y_train, y_test = train_test_split(X_current, y_current, test_size=0.2, random_state=42)
+
+    # Prepare new sample data (the same first row from the test set as in the prediction part)
+    sample_data = X_test.iloc[:1]
+
+    # Explain the prediction for the sample data
+    exp = explainer.explain_instance(sample_data.iloc[0].values, model.predict_proba, num_features=4)
+
+    # Print the explanation for the company
+    print(f"\nExplanation for Company {symbol}:")
+    for feature, importance in exp.as_list():
+        print(f"{feature}: {importance}")
